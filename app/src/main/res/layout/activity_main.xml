@@ -7,6 +7,7 @@
     tools:context=".MainActivity">
 
    <com.skateboard.favouriteview.FavouriteView
+       app:selected_color="@android:color/holo_red_dark"
        android:layout_gravity="center"
        android:id="@+id/favouriteView"
        android:layout_width="60dp"

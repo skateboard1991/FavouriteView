@@ -12,11 +12,13 @@ class FavouriteView(context: Context, attrs: AttributeSet?, defStyle: Int) : Vie
 {
     private lateinit var paint: Paint
 
+    private lateinit var statellitePaint: Paint
+
     private lateinit var path: Path
 
     private var spaceBetweenHandAndShoulder = 5
 
-    private var state = 0
+    private var state = STATE_NORMAL
 
     private lateinit var valueAnimator: ValueAnimator
 
@@ -26,9 +28,13 @@ class FavouriteView(context: Context, attrs: AttributeSet?, defStyle: Int) : Vie
 
     private var centerY = 0f
 
-    private var strokeWithScaleFraction=1f
+    private var strokeWithScaleFraction = 1f
 
-    private var statelliteOffsetFraction=0f
+    private var statelliteOffsetFraction = 0f
+
+    private var selectedColor = Color.BLACK
+
+    private var normalColor = Color.BLACK
 
     companion object
     {
@@ -36,7 +42,7 @@ class FavouriteView(context: Context, attrs: AttributeSet?, defStyle: Int) : Vie
 
         val STATE_CIRCLE = 2
 
-        val STATE_RING=3
+        val STATE_RING = 3
 
         val STATE_STATELLITE = 4
 
@@ -49,15 +55,27 @@ class FavouriteView(context: Context, attrs: AttributeSet?, defStyle: Int) : Vie
 
     init
     {
+        if (attrs != null)
+        {
+            initParse(attrs)
+        }
         initPaint()
+        initStatellitePaint()
         initClickEvent()
     }
 
+    private fun initParse(attrs: AttributeSet)
+    {
+        val typedArray = context.obtainStyledAttributes(attrs, R.styleable.FavouriteView)
+        selectedColor = typedArray.getColor(R.styleable.FavouriteView_selected_color, Color.BLACK)
+        normalColor = typedArray.getColor(R.styleable.FavouriteView_normal_color, Color.BLACK)
+        typedArray.recycle()
+    }
 
     private fun initPaint()
     {
         paint = Paint(Paint.ANTI_ALIAS_FLAG)
-        paint.color = ContextCompat.getColor(context, android.R.color.black)
+        paint.color = normalColor
         paint.style = Paint.Style.STROKE
         paint.strokeWidth = 4f
         path = Path()
@@ -65,10 +83,17 @@ class FavouriteView(context: Context, attrs: AttributeSet?, defStyle: Int) : Vie
         paint.pathEffect = cornerPathEffect
     }
 
+    private fun initStatellitePaint()
+    {
+        statellitePaint = Paint(Paint.ANTI_ALIAS_FLAG)
+        statellitePaint.color = selectedColor
+        statellitePaint.style=Paint.Style.FILL
+    }
+
     private fun initAnimator()
     {
         valueAnimator = ValueAnimator.ofFloat(0f, 400f)
-        valueAnimator.duration = 400
+        valueAnimator.duration = 500
         valueAnimator.addUpdateListener(updateListener)
         valueAnimator.addListener(object : Animator.AnimatorListener
         {
@@ -87,7 +112,7 @@ class FavouriteView(context: Context, attrs: AttributeSet?, defStyle: Int) : Vie
             {
                 scaleX = Math.max(1f, scaleX)
                 scaleY = Math.max(1f, scaleY)
-                setState(STATE_NORMAL)
+                setState(STATE_SELECTED)
             }
 
             override fun onAnimationCancel(animation: Animator?)
@@ -117,18 +142,18 @@ class FavouriteView(context: Context, attrs: AttributeSet?, defStyle: Int) : Vie
 
             }
 
-            time in 201..300->
+            time in 201..300 ->
             {
                 scaleX = 1f
                 scaleY = 1f
-                strokeWithScaleFraction= ((time-200)/100f)
+                strokeWithScaleFraction = ((time - 200) / 100f)
                 setState(STATE_RING)
                 postInvalidate()
             }
 
             else ->
             {
-                statelliteOffsetFraction=((time-300)/100f)
+                statelliteOffsetFraction = ((time - 300) / 100f)
                 setState(STATE_STATELLITE)
                 postInvalidate()
             }
@@ -151,7 +176,6 @@ class FavouriteView(context: Context, attrs: AttributeSet?, defStyle: Int) : Vie
     }
 
 
-
     private fun initClickEvent()
     {
         setOnClickListener {
@@ -161,7 +185,7 @@ class FavouriteView(context: Context, attrs: AttributeSet?, defStyle: Int) : Vie
                 startAnimate()
             } else
             {
-
+                setState(STATE_NORMAL)
             }
 
         }
@@ -190,37 +214,88 @@ class FavouriteView(context: Context, attrs: AttributeSet?, defStyle: Int) : Vie
     override fun onDraw(canvas: Canvas?)
     {
         super.onDraw(canvas)
-        path.reset()
-        centerX = (width / 2).toFloat()
-        centerY = (height / 2).toFloat()
+        prepareToDraw()
         if (canvas != null)
         {
             when (state)
             {
                 STATE_NORMAL ->
                 {
+                    resetPaintColor()
                     drawFinger(canvas)
                 }
+                STATE_SELECTED ->
+                {
+                    resetPaintColor()
+                    drawFinger(canvas)
+                }
+
                 STATE_CIRCLE ->
                 {
+                    resetPaintColor()
                     drawCircle(canvas)
                 }
 
-                STATE_RING->
+                STATE_RING ->
                 {
+
+                    resetPaintColor()
                     drawRing(canvas)
                     drawFinger(canvas)
                 }
 
                 STATE_STATELLITE ->
                 {
+
+                    resetPaintColor()
                     drawStatellite(canvas)
                 }
             }
 
-
         }
     }
+
+    private fun resetPaintColor()
+    {
+        when
+        {
+
+            state == STATE_NORMAL ->
+            {
+                paint.colorFilter = null
+                paint.color = normalColor
+            }
+
+            state != STATE_STATELLITE ->
+            {
+                paint.colorFilter = null
+                paint.color = selectedColor
+            }
+
+            else ->
+            {
+                paint.color = selectedColor
+                if (statelliteOffsetFraction <= 0.5f)
+                {
+                    val parameter = 1f
+                    statellitePaint.colorFilter = ColorMatrixColorFilter(floatArrayOf(1f, 0f, 0f, 0f, 0f, 0f, 1f, 0f, 0f, 0f, 0f, 0f, 1f, 0f, 0f, 0f, 0f, 0f, parameter, 0f))
+                } else
+                {
+                    val parameter = 1 - statelliteOffsetFraction
+                    statellitePaint.colorFilter = ColorMatrixColorFilter(floatArrayOf(1f, 0f, 0f, 0f, 0f, 0f, 1f, 0f, 0f, 0f, 0f, 0f, 1f, 0f, 0f, 0f, 0f, 0f, parameter, 0f))
+                }
+            }
+        }
+    }
+
+
+    private fun prepareToDraw()
+    {
+        path.reset()
+        centerX = (width / 2).toFloat()
+        centerY = (height / 2).toFloat()
+    }
+
 
     private fun drawFinger(canvas: Canvas)
     {
@@ -254,7 +329,6 @@ class FavouriteView(context: Context, attrs: AttributeSet?, defStyle: Int) : Vie
     {
         drawFinger(canvas)
         drawSmallStatellites(canvas)
-//        drawRing(canvas)
     }
 
     private fun drawRing(canvas: Canvas)
@@ -262,18 +336,17 @@ class FavouriteView(context: Context, attrs: AttributeSet?, defStyle: Int) : Vie
         val radius = (size.toFloat()) / 3
         paint.style = Paint.Style.STROKE
         paint.strokeWidth = ((1 - strokeWithScaleFraction) * radius)
-        canvas.drawCircle(centerX, centerY, radius-paint.strokeWidth/2, paint)
+        canvas.drawCircle(centerX, centerY, radius - paint.strokeWidth / 2, paint)
     }
 
     private fun drawSmallStatellites(canvas: Canvas)
     {
-        paint.style = Paint.Style.FILL
         val bigRadius = (size.toFloat()) / 3
         val smallRadius = (centerY - bigRadius) / 3
-        val offset=size/2-bigRadius-2*smallRadius
-        canvas.drawCircle(centerX, centerY - bigRadius - offset*statelliteOffsetFraction, smallRadius, paint)
-        canvas.drawCircle(centerX + bigRadius + offset*statelliteOffsetFraction , centerX, smallRadius, paint)
-        canvas.drawCircle(centerX, centerY + bigRadius + offset*statelliteOffsetFraction , smallRadius, paint)
-        canvas.drawCircle(centerX - bigRadius - offset*statelliteOffsetFraction , centerY, smallRadius, paint)
+        val offset = size / 2 - bigRadius - 2 * smallRadius
+        canvas.drawCircle(centerX, centerY - bigRadius - offset * statelliteOffsetFraction, smallRadius, statellitePaint)
+        canvas.drawCircle(centerX + bigRadius + offset * statelliteOffsetFraction, centerY, smallRadius, statellitePaint)
+        canvas.drawCircle(centerX, centerY + bigRadius + offset * statelliteOffsetFraction, smallRadius, statellitePaint)
+        canvas.drawCircle(centerX - bigRadius - offset * statelliteOffsetFraction, centerY, smallRadius, statellitePaint)
     }
 }
