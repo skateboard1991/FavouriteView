@@ -26,7 +26,9 @@ class FavouriteView(context: Context, attrs: AttributeSet?, defStyle: Int) : Vie
 
     private var centerY = 0f
 
-    private var strokeWithScaleFran=1f
+    private var strokeWithScaleFraction=1f
+
+    private var statelliteOffsetFraction=0f
 
     companion object
     {
@@ -65,8 +67,8 @@ class FavouriteView(context: Context, attrs: AttributeSet?, defStyle: Int) : Vie
 
     private fun initAnimator()
     {
-        valueAnimator = ValueAnimator.ofFloat(0f, 300f)
-        valueAnimator.duration = 500
+        valueAnimator = ValueAnimator.ofFloat(0f, 400f)
+        valueAnimator.duration = 400
         valueAnimator.addUpdateListener(updateListener)
         valueAnimator.addListener(object : Animator.AnimatorListener
         {
@@ -119,13 +121,14 @@ class FavouriteView(context: Context, attrs: AttributeSet?, defStyle: Int) : Vie
             {
                 scaleX = 1f
                 scaleY = 1f
-                strokeWithScaleFran= ((time-200)/100f)
+                strokeWithScaleFraction= ((time-200)/100f)
                 setState(STATE_RING)
                 postInvalidate()
             }
 
             else ->
             {
+                statelliteOffsetFraction=((time-300)/100f)
                 setState(STATE_STATELLITE)
                 postInvalidate()
             }
@@ -207,7 +210,6 @@ class FavouriteView(context: Context, attrs: AttributeSet?, defStyle: Int) : Vie
                 {
                     drawRing(canvas)
                     drawFinger(canvas)
-                    drawSmallStatellites(canvas)
                 }
 
                 STATE_STATELLITE ->
@@ -252,15 +254,15 @@ class FavouriteView(context: Context, attrs: AttributeSet?, defStyle: Int) : Vie
     {
         drawFinger(canvas)
         drawSmallStatellites(canvas)
-        drawRing(canvas)
+//        drawRing(canvas)
     }
 
     private fun drawRing(canvas: Canvas)
     {
         val radius = (size.toFloat()) / 3
         paint.style = Paint.Style.STROKE
-        paint.strokeWidth = ((1 - strokeWithScaleFran) * radius)
-        canvas.drawCircle(centerX, centerY, radius, paint)
+        paint.strokeWidth = ((1 - strokeWithScaleFraction) * radius)
+        canvas.drawCircle(centerX, centerY, radius-paint.strokeWidth/2, paint)
     }
 
     private fun drawSmallStatellites(canvas: Canvas)
@@ -268,9 +270,10 @@ class FavouriteView(context: Context, attrs: AttributeSet?, defStyle: Int) : Vie
         paint.style = Paint.Style.FILL
         val bigRadius = (size.toFloat()) / 3
         val smallRadius = (centerY - bigRadius) / 3
-        canvas.drawCircle(centerX, centerY - bigRadius - 10* strokeWithScaleFran, smallRadius, paint)
-        canvas.drawCircle(centerX + bigRadius + 10 * strokeWithScaleFran, centerX, smallRadius, paint)
-        canvas.drawCircle(centerX, centerY + bigRadius + 10 * strokeWithScaleFran, smallRadius, paint)
-        canvas.drawCircle(centerX - bigRadius - 10 * strokeWithScaleFran, centerY, smallRadius, paint)
+        val offset=size/2-bigRadius-2*smallRadius
+        canvas.drawCircle(centerX, centerY - bigRadius - offset*statelliteOffsetFraction, smallRadius, paint)
+        canvas.drawCircle(centerX + bigRadius + offset*statelliteOffsetFraction , centerX, smallRadius, paint)
+        canvas.drawCircle(centerX, centerY + bigRadius + offset*statelliteOffsetFraction , smallRadius, paint)
+        canvas.drawCircle(centerX - bigRadius - offset*statelliteOffsetFraction , centerY, smallRadius, paint)
     }
 }
